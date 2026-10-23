@@ -219,3 +219,14 @@ test("keeps a recoverable URL when a live pending removal may still finish after
   assert.equal(x.disk().archive.length, 1);
   assert.equal(x.disk().archive[0]?.status, "uncertain");
 });
+test("does not starve eligible tabs behind more than 2000 protected tabs", async () => {
+  const x = setup();
+  const candidate = x.tabs.get(1)!;
+  x.tabs.clear();
+  for (let id = 1; id <= 2000; id++)
+    x.tabs.set(id, { ...candidate, id, active: true });
+  x.tabs.set(2001, { ...candidate, id: 2001 });
+  await x.engine.scan();
+  assert.equal(x.tabs.has(2001), false);
+  assert.equal(x.tabs.size, 2000);
+});

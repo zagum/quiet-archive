@@ -118,7 +118,7 @@ export class Engine {
         stats[why] = (stats[why] ?? 0) + 1;
       };
       const groups = await this.p.groups();
-      for (const candidate of (await this.p.tabs()).slice(0, 2000)) {
+      for (const candidate of await this.p.tabs()) {
         if (count >= 50) break;
         const local = await this.p.activity(candidate.id);
         const check = this.check(candidate, s.settings, groups, local);

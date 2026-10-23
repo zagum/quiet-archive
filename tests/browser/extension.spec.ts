@@ -163,16 +163,18 @@ test("real MV3 popup, safe close, archive search, bulk restore, Undo and restart
   await archive.reload();
   await expect(archive.locator(".archive-row")).toHaveCount(3);
   await archive.setViewportSize({ width: 1400, height: 1000 });
-  await archive.screenshot({
-    path: "docs/screenshots/archive.png",
-    fullPage: true,
-  });
+  if (process.env.UPDATE_SCREENSHOTS === "1")
+    await archive.screenshot({
+      path: "docs/screenshots/archive.png",
+      fullPage: true,
+    });
   await popup.reload();
   await popup.setViewportSize({ width: 380, height: 920 });
-  await popup.screenshot({
-    path: "docs/screenshots/popup.png",
-    fullPage: true,
-  });
+  if (process.env.UPDATE_SCREENSHOTS === "1")
+    await popup.screenshot({
+      path: "docs/screenshots/popup.png",
+      fullPage: true,
+    });
   await archive.locator("#restore-all").click();
   await expect(archive.locator("#status")).toContainText("3 restored");
   await expect(archive.locator(".archive-row")).toHaveCount(0);

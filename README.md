@@ -10,7 +10,7 @@ Requires **Chrome 119+**. `tabs.lastAccessed` is used on Chrome 121+; earlier ve
 
 ### Ready-to-load build
 
-1. Download and extract `quiet-archive-chrome.zip` from the repository's [Releases](../../releases).
+1. Download and extract `quiet-archive-chrome.zip` from the repository's [Releases](https://github.com/zagum/quiet-archive/releases).
 2. Open `chrome://extensions` in the Chrome profile you want to use.
 3. Enable **Developer mode** in the upper-right corner.
 4. Click **Load unpacked** and select the extracted folder containing `manifest.json`.
@@ -90,7 +90,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Unit/integration tests cover time boundaries, activity fallback, protected tab states, recreated groups, settings validation, write-before-close, cancellation, storage failures, partial restore, journals, session-ID reuse, concurrency, and safety guard behavior. Playwright uses real MV3 APIs in an isolated temporary Chromium profile, a local HTTP fixture, and a test-only worker clock offset to exercise aging without waiting a day. It does not touch your personal browser profile. CI builds an installable artifact.
+Unit/integration tests cover time boundaries, activity fallback, protected tab states, recreated groups, settings validation, write-before-close, cancellation, storage failures, partial restore, journals, session-ID reuse, concurrency, and safety guard behavior. Playwright uses real MV3 APIs in an isolated temporary Chromium profile, a local HTTP fixture, and a test-only worker clock offset to exercise aging without waiting a day. It does not touch your personal browser profile. CI builds an installable artifact. To refresh the documentation screenshots intentionally, use `UPDATE_SCREENSHOTS=1 npm run test:e2e`.
 
 Project structure: `src/policy.ts` pure eligibility; `src/engine.ts` durable operation engine; `src/background.ts` Chrome adapter/events; `src/guard.ts` page safety guard; `src/popup.ts` and `src/archive.ts` UI; `public/` manifest, styles and static pages. Build output contains no remote code or runtime dependencies.
 
