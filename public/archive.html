@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Archive · Quiet Archive</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="archive-page">
+    <header class="archive-header">
+      <div class="brand">
+        <span class="mark">q</span>
+        <div>
+          <h1>Quiet Archive</h1>
+          <p>A little less noise.</p>
+        </div>
+      </div>
+      <span class="device-tag">◈ &nbsp; Only on this device</span>
+    </header>
+    <main class="archive-main">
+      <div class="eyebrow">YOUR TABS, KEPT CLOSE</div>
+      <div class="archive-title">
+        <div>
+          <h2>A place to come back to.</h2>
+          <p>Everything you’ve put away, ready when you are.</p>
+        </div>
+        <span id="total" class="total">0 tabs</span>
+      </div>
+      <section id="undo-panel" class="undo" hidden>
+        <div>
+          <strong>Your last auto archive</strong>
+          <p id="undo-copy"></p>
+        </div>
+        <button id="undo">Undo last batch</button>
+      </section>
+      <div class="toolbar">
+        <label class="search"
+          ><span>⌕</span
+          ><input
+            id="search"
+            type="search"
+            placeholder="Search titles, URLs or groups"
+            aria-label="Search archive" /></label
+        ><button id="restore-all" class="primary">Restore all</button
+        ><button id="export">Export backup</button>
+      </div>
+      <div class="selection-bar">
+        <label><input id="select-all" type="checkbox" /> Select visible</label
+        ><span id="selection-count">0 selected</span
+        ><button id="restore-selected" class="text-button" disabled>
+          Restore selected ↗
+        </button>
+      </div>
+      <p id="status" role="status" aria-live="polite"></p>
+      <div id="entries"></div>
+      <div id="empty" class="empty" hidden>
+        <div class="empty-icon">⌑</div>
+        <h3>Space for what’s next.</h3>
+        <p>Your archived tabs will be here when you need them.</p>
+      </div>
+      <footer class="archive-footer">
+        <span>Private by design. Stored in this Chrome profile.</span
+        ><span
+          >URLs are restored; page state and form contents aren’t saved.</span
+        >
+      </footer>
+    </main>
+    <script src="archive.js"></script>
+  </body>
+</html>

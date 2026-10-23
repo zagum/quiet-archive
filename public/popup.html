@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quiet Archive</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="popup">
+    <header class="brand">
+      <span class="mark">q</span>
+      <div>
+        <h1>Quiet Archive</h1>
+        <p>A little room to think.</p>
+      </div>
+      <span id="live" class="pill">On</span>
+    </header>
+    <main>
+      <section class="card">
+        <div class="section-heading">
+          <h2>Auto archive</h2>
+          <label class="switch"
+            ><input
+              type="checkbox"
+              id="enabled"
+              aria-label="Enable auto archive" /><span></span
+          ></label>
+        </div>
+        <p class="muted">Move quiet tabs out of your way.</p>
+        <label class="field" for="interval">Archive after inactivity</label
+        ><select id="interval">
+          <option value="1440">24 hours</option>
+          <option value="10080">7 days</option>
+          <option value="43200">30 days</option>
+          <option value="custom">Custom time…</option>
+        </select>
+        <div id="custom-row" class="inline" hidden>
+          <input
+            id="custom-value"
+            type="number"
+            min="1"
+            max="525600"
+            step="1"
+            aria-label="Custom duration"
+          /><select id="custom-unit" aria-label="Duration unit">
+            <option value="1">minutes</option>
+            <option value="60">hours</option>
+            <option value="1440">days</option></select
+          ><button id="apply-time" class="small">Apply</button>
+        </div>
+      </section>
+      <section class="card">
+        <h2>Always keep</h2>
+        <p class="muted">Active, pinned and selected tabs stay open.</p>
+        <label class="setting"
+          ><span
+            >Tabs playing audio<small>Keep music and calls around</small></span
+          ><input type="checkbox" id="protectAudio" role="switch" /></label
+        ><label class="setting"
+          ><span>Ungrouped tabs<small>Protect tabs outside a group</small></span
+          ><input type="checkbox" id="protectUngrouped" role="switch" /></label
+        ><label class="setting"
+          ><span
+            >Archive notifications<small>With a shortcut to Undo</small></span
+          ><input type="checkbox" id="notifications" role="switch"
+        /></label>
+      </section>
+      <section class="card">
+        <div class="section-heading">
+          <h2>Protected groups</h2>
+          <span id="group-count" class="muted"></span>
+        </div>
+        <p class="muted">Choose the groups you want to keep.</p>
+        <div id="groups"></div>
+        <p class="micro">
+          Rules follow a group’s name + color across restarts. Identical groups
+          share protection. Saved Tab Groups are separate.
+        </p>
+      </section>
+      <div class="safety-note">
+        <span>◈</span>
+        <p>Unsaved edits and pages we can’t verify stay open.</p>
+      </div>
+      <section id="undo-panel" class="undo" hidden>
+        <div>
+          <strong>Room made.</strong>
+          <p id="undo-copy"></p>
+        </div>
+        <button id="undo" class="small">Undo</button>
+      </section>
+      <p id="status" role="status" aria-live="polite"></p>
+      <footer>
+        <button id="archive" class="primary">
+          Open archive <span id="archive-count">0</span><span>↗</span></button
+        ><button id="scan" class="text-button">Check tabs now</button>
+        <p id="last-scan" class="micro"></p>
+      </footer>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
