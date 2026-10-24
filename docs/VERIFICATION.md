@@ -23,3 +23,13 @@ User-supplied Closure design and all four original PNG icon sizes applied. Exist
 - Real MV3 browser scenarios: 2 passed, including new duration pills, custom time, group chip protection, search, bulk restore, Undo and narrow-screen overflow.
 - Independent read-only design-change review: no critical or important findings.
 - Installed Chrome popup: Closure 1.1.0 name, original supplied icon, 24-hour preset, audio protection and existing archive count visibly verified.
+
+## Permanent-directory installer — 2026-10-24
+
+Added the standalone Python 3.10+ installer, ZIP and built-source inputs, OS-specific Chrome directory selection, legacy-path preservation, code backups, rollback, path validation and dry-run mode. Browser preferences, registration and archive data are outside the installer’s write scope.
+
+- Full Node extension suite: 38 passed.
+- Installer filesystem / CLI suite: 14 passed, entirely in temporary directories.
+- Strict TypeScript checking, production build and formatting checks: passed.
+- Read-only real-package dry-run selected the existing `Unpacked Extensions/Quiet Archive` directory; no installed Chrome files changed.
+- Independent review found a case-insensitive profile-path bypass; a regression test reproduced it, then passed after case/Unicode-normalized boundary checks.

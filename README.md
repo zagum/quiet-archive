@@ -18,9 +18,34 @@ Requires **Chrome 119+**. `tabs.lastAccessed` is used on Chrome 121+; earlier ve
 
 Each Chrome profile has its own settings and archive. Install separately in each profile. Incognito is intentionally disabled.
 
+### Recommended: install into a permanent Chrome directory
+
+Requires Python 3.10+ in addition to Node.js 22+ when building from source:
+
+```sh
+npm ci
+npm run install:chrome
+```
+
+The command builds the extension and places it in `Unpacked Extensions/Closure` under your Chrome user-data directory. On macOS that is `~/Library/Application Support/Google/Chrome/Unpacked Extensions/Closure`. If the previous `Unpacked Extensions/Quiet Archive` directory already exists, the installer reuses it so the loaded path and extension ID stay stable.
+
+**First time:** open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the exact directory printed by the installer. **Updates:** rerun the command and click **Reload** on the existing extension card. Chrome confirms first registration in its UI; the script installs files and does not silently register extensions or edit browser preferences.
+
+For a ready-built ZIP, download `install_chrome.py` and `closure-chrome.zip` from [Releases](https://github.com/zagum/quiet-archive/releases/tag/v1.1.0), put them together, then run:
+
+```sh
+python3 install_chrome.py --zip closure-chrome.zip
+```
+
+No Node.js or npm packages are needed for the ZIP route. On Windows use `py` instead of `python3` if that is your Python launcher. The installer supports macOS, Linux and Windows data-directory conventions; filesystem tests use isolated temporary directories, with Linux coverage configured in CI.
+
+Use `--dry-run` to validate without changing Chrome files; `--target "/exact/currently/loaded/path"` updates a custom existing installation. Changing the loaded folder can change the extension ID and local storage, so keep that path when updating. Previous code is retained in a timestamped sibling backup; profile settings and the archive are never copied or removed. Leave the printed installation directory in place; the ZIP and repository checkout can be removed once Chrome is loading that permanent copy.
+
+See [подробная инструкция на русском](docs/INSTALL_RU.md) for ZIP installation, custom paths, updates and recovery.
+
 ### Build from source
 
-Use Node.js 22+ and npm:
+Use Node.js 22+, npm and Python 3.10+ (for installer tests):
 
 ```sh
 npm ci

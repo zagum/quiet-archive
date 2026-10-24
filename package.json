@@ -6,11 +6,13 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test tests/*.test.ts",
+    "test": "node --import tsx --test tests/*.test.ts && npm run test:installer",
     "test:e2e": "playwright test",
     "check": "npm run typecheck && npm test && npm run build",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:installer": "python3 -m unittest discover -s tests -p '*_test.py' -v",
+    "install:chrome": "npm run build && python3 scripts/install_chrome.py --source dist"
   },
   "devDependencies": {
     "@playwright/test": "^1.64.1",

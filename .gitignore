@@ -4,3 +4,6 @@ playwright-report/
 test-results/
 *.zip
 .DS_Store
+
+__pycache__/
+*.py[cod]
