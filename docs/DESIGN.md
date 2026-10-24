@@ -19,3 +19,9 @@ Restore individual, selected, or all entries into an available normal window, fa
 ## Alternatives
 
 Sessions API alone has bounded browser-managed history and cannot provide an independent durable archive. A framework is unnecessary for two small screens. Raw group IDs cannot support browser restart. Prefer conservative false positives to closing an uncertain page.
+
+## Closure visual update — 2026-10-24
+
+User-provided closure.zip supplies the Closure name, blue icon assets, light gray background, white cards, duration pills, protected-group chips and archive day sections. The archive’s reference implementation is visual material only: the tested TypeScript engine, local state schema, unsaved-edit guard, durable group rules, Undo, bulk restoration and unlimited retention remain unchanged. Original icon PNGs are used at 16, 32, 48 and 128 pixels. No external font or favicon requests. Existing internal alarm/storage identifiers and installed extension directory remain stable across the 1.1.0 update.
+
+Duration choices retain 24 hours, 7 days, 30 days and custom time; quick 1/4/12-hour presets match the reference’s pill layout. Custom inputs retain accessible labels and keyboard focus. Group chips retain native accessible checkboxes, and closed groups keep their durable rules. Archive day labels use local calendar boundaries rather than fixed 24-hour arithmetic.

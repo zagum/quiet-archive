@@ -9,6 +9,7 @@ import {
   type Snapshot,
 } from "./ui.js";
 import type { Entry } from "./model.js";
+import { archiveDayLabel, relativeAge, hostname } from "./view-model.js";
 let entries: Entry[] = [];
 let selected = new Set<string>();
 let undoIds: string[] = [];
@@ -38,12 +39,27 @@ function render() {
   $("total").textContent =
     `${entries.length} tab${entries.length === 1 ? "" : "s"}`;
   $<HTMLButtonElement>("restore-all").disabled = !entries.some(restorable);
-  if (!found.length && entries.length) {
-    $("empty").querySelector("h3")!.textContent = "Nothing matches yet.";
-    $("empty").querySelector("p")!.textContent =
-      "Try another title, URL or group name.";
+  if (!found.length) {
+    $("empty").querySelector("h2")!.textContent = entries.length
+      ? "No matches."
+      : "All caught up.";
+    $("empty").querySelector("p")!.textContent = entries.length
+      ? "Try another title, URL or group name."
+      : "Nothing to close the loop on.";
   }
+  const days = new Map<string, HTMLElement>();
+  const now = Date.now();
   for (const e of found) {
+    const day = archiveDayLabel(e.closedAt, now);
+    let card = days.get(day);
+    if (!card) {
+      const section = text("section", "", "archive-day");
+      section.append(text("h2", day, "day-heading"));
+      card = text("div", "", "card day-card");
+      section.append(card);
+      list.append(section);
+      days.set(day, card);
+    }
     const row = text("article", "", "archive-row");
     const check = document.createElement("input");
     check.type = "checkbox";
@@ -58,17 +74,28 @@ function render() {
     row.append(check);
     const icon = text(
       "span",
-      e.title.slice(0, 1).toUpperCase() || "↗",
+      hostname(e.url).slice(0, 1).toUpperCase() || "↗",
       "site-icon",
     );
+    const palette = [
+      "#8a5cf0",
+      "#3b78e7",
+      "#e8541e",
+      "#2f9a52",
+      "#d4231b",
+      "#f26a10",
+      "#24292f",
+    ];
+    icon.style.backgroundColor =
+      palette[hostname(e.url).length % palette.length]!;
     row.append(icon);
     const content = text("div", "", "entry-content");
     content.append(text("h3", e.title));
-    const link = text("span", e.url, "entry-url");
+    const link = text("span", hostname(e.url), "entry-url");
     link.title = e.url;
     content.append(link);
     const meta = text("div", "", "entry-meta");
-    meta.append(text("span", date(e.closedAt)));
+
     if (e.group) {
       const tag = text("span", e.group.title || "Untitled group", "group-tag");
       tag.dataset.color = e.group.color;
@@ -92,14 +119,18 @@ function render() {
         ),
       );
     row.append(content);
-    const restore = text("button", "Restore ↗") as HTMLButtonElement;
+    const age = text("time", relativeAge(e.closedAt, now), "entry-age");
+    age.setAttribute("datetime", new Date(e.closedAt).toISOString());
+    age.title = date(e.closedAt);
+    row.append(age);
+    const restore = text("button", "Restore", "btn-soft") as HTMLButtonElement;
     restore.disabled = !restorable(e);
     restore.addEventListener(
       "click",
       () => void busy(restore, () => restoreIds([e.id])),
     );
     row.append(restore);
-    list.append(row);
+    card.append(row);
   }
   selection();
 }
@@ -161,7 +192,7 @@ $("export").addEventListener(
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `quiet-archive-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `closure-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 10000);
       status("Backup exported. It contains private tab titles and URLs.");

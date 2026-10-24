@@ -35,7 +35,7 @@ export function duration(minutes: number) {
     return `${minutes / 1440} day${minutes === 1440 ? "" : "s"}`;
   if (minutes % 60 === 0)
     return `${minutes / 60} hour${minutes === 60 ? "" : "s"}`;
-  return `${minutes} minutes`;
+  return `${minutes} minute${minutes === 1 ? "" : "s"}`;
 }
 export async function busy(button: HTMLButtonElement, fn: () => Promise<void>) {
   button.disabled = true;

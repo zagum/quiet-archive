@@ -6,6 +6,7 @@ import {
   busy,
   showUndo,
   date,
+  duration,
   type Snapshot,
 } from "./ui.js";
 import { groupKey } from "./policy.js";
@@ -25,13 +26,23 @@ async function refresh() {
     $<HTMLInputElement>(key).checked = s[key];
   $("live").textContent = s.enabled ? "On" : "Paused";
   $("live").classList.toggle("paused", !s.enabled);
-  const preset = ["1440", "10080", "43200"].includes(
-    String(s.inactivityMinutes),
+  const presets = [
+    ...document.querySelectorAll<HTMLButtonElement>("[data-minutes]"),
+  ];
+  const preset = presets.some(
+    (button) => Number(button.dataset.minutes) === s.inactivityMinutes,
   );
-  $<HTMLSelectElement>("interval").value = preset
-    ? String(s.inactivityMinutes)
-    : "custom";
+  for (const button of presets)
+    button.setAttribute(
+      "aria-pressed",
+      String(Number(button.dataset.minutes) === s.inactivityMinutes),
+    );
+  $("after-text").textContent =
+    `After ${s.inactivityMinutes === 1440 ? "24 hours" : duration(s.inactivityMinutes)} of inactivity`;
+  $("presets").classList.toggle("dim", !s.enabled);
   $("custom-row").hidden = preset;
+  $("custom-time").setAttribute("aria-expanded", String(!preset));
+  $("custom-time").textContent = preset ? "Custom time…" : "Custom time";
   $<HTMLInputElement>("custom-value").value = String(s.inactivityMinutes);
   $<HTMLSelectElement>("custom-unit").value = "1";
   $("archive-count").textContent = String(state.archive.length);
@@ -49,14 +60,7 @@ async function refresh() {
     dot.dataset.color = rule.color;
     label.append(dot);
     const title = text("span", rule.title || "Untitled group");
-    title.append(
-      text(
-        "small",
-        open
-          ? `${count} matching group${count === 1 ? "" : "s"} open`
-          : "Not currently open",
-      ),
-    );
+    label.title = `${rule.title || "Untitled group"} · ${rule.color} · ${open ? `${count} matching group${count === 1 ? "" : "s"} open` : "Not currently open"}`;
     label.append(title);
     const input = document.createElement("input");
     input.type = "checkbox";
@@ -127,15 +131,22 @@ for (const key of [
       await refresh();
     }
   });
-$<HTMLSelectElement>("interval").addEventListener("change", async () => {
-  const value = $<HTMLSelectElement>("interval").value;
-  $("custom-row").hidden = value !== "custom";
-  if (value !== "custom")
-    try {
-      await patch({ inactivityMinutes: Number(value) });
-    } catch (e) {
-      status(String(e), true);
-    }
+for (const button of document.querySelectorAll<HTMLButtonElement>(
+  "[data-minutes]",
+)) {
+  button.addEventListener(
+    "click",
+    () =>
+      void busy(button, () =>
+        patch({ inactivityMinutes: Number(button.dataset.minutes) }),
+      ),
+  );
+}
+$("custom-time").addEventListener("click", () => {
+  const hidden = !$("custom-row").hidden;
+  $("custom-row").hidden = hidden;
+  $("custom-time").setAttribute("aria-expanded", String(!hidden));
+  if (!hidden) $<HTMLInputElement>("custom-value").focus();
 });
 $("apply-time").addEventListener(
   "click",

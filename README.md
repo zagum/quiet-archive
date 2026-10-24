@@ -1,6 +1,6 @@
-# Quiet Archive
+# Closure
 
-A local-only Chrome extension inspired by Arc Auto Archive. Automatically close inactive tabs, keep chosen groups, and restore tabs from a private archive. TypeScript + Manifest V3, English interface, no account or server.
+Formerly Quiet Archive. A local-only Chrome extension inspired by Arc Auto Archive. Automatically close inactive tabs, keep chosen groups, and restore tabs from a private archive. TypeScript + Manifest V3, English interface, no account or server.
 
 ![Archive](docs/screenshots/archive.png)
 
@@ -10,11 +10,11 @@ Requires **Chrome 119+**. `tabs.lastAccessed` is used on Chrome 121+; earlier ve
 
 ### Ready-to-load build
 
-1. Download and extract `quiet-archive-chrome.zip` from the repository's [Releases](https://github.com/zagum/quiet-archive/releases).
+1. Download and extract `closure-chrome.zip` from the repository's [Releases](https://github.com/zagum/quiet-archive/releases).
 2. Open `chrome://extensions` in the Chrome profile you want to use.
 3. Enable **Developer mode** in the upper-right corner.
 4. Click **Load unpacked** and select the extracted folder containing `manifest.json`.
-5. Pin Quiet Archive in Chrome’s extensions menu and open its popup.
+5. Pin Closure in Chrome’s extensions menu and open its popup.
 
 Each Chrome profile has its own settings and archive. Install separately in each profile. Incognito is intentionally disabled.
 
@@ -33,7 +33,7 @@ Then load the repository’s **`dist/`** folder using the same Developer Mode st
 
 ## Use
 
-- Select **24 hours**, **7 days**, **30 days**, or a custom whole-minute duration (1 minute to 365 days).
+- Choose a time pill (**1h, 4h, 12h, 24h, 7d or 30d**) or **Custom time…** for a custom whole-minute duration (1 minute to 365 days).
 - Enable **Tabs playing audio** to protect audible tabs. Muted tabs are protected only if Chrome reports them as audible. Active, pinned and selected tabs in every window always stay open.
 - Enable **Ungrouped tabs** to keep tabs outside any group. With it off, eligible ungrouped tabs are archived normally.
 - Select groups under **Protected groups**. Rules persist even when the group or its window closes.
@@ -45,7 +45,7 @@ Checks run approximately once a minute while Chrome runs, in batches of up to 50
 
 ## Safety and limits
 
-Quiet Archive is conservative: unknown safety means **keep open**.
+Closure is conservative: unknown safety means **keep open**.
 
 - Skips active, pinned, highlighted, incognito, loading, navigating, discarded and frozen tabs, non-normal windows, and non-HTTP(S) URLs (including `chrome://`, `file://`, Chrome Web Store restricted pages and extension pages).
 - A local document-start guard records form/contenteditable edits and `beforeunload` registration. Any edit or registered listener protects that document until navigation/reload, even if the app later autosaves. This intentionally errs toward keeping tabs.
@@ -61,7 +61,7 @@ See [edge cases and recovery](docs/EDGE_CASES.md) and [manual test guide](docs/T
 
 Chrome group IDs last only for a browser session. Protection matches a group's **exact title + color** after a restart or recreation. If several groups share both, all matches are protected; the popup shows how many match. Give groups distinct names/colors for independent rules. Untitled groups match an empty title plus color. Renaming/recoloring an open protected group retains the old rule and adds its new signature; uncheck obsolete rules when no longer needed.
 
-Chrome **Saved Tab Groups** are a different feature. Chrome’s public tabGroups API does not provide a durable saved-group identity or a saved flag. Quiet Archive neither manages saved groups nor treats saved/collapsed/shared status as protection. Explicitly check any group you want to keep. Restoring creates ordinary groups, not saved groups, and never overwrites a different existing group.
+Chrome **Saved Tab Groups** are a different feature. Chrome’s public tabGroups API does not provide a durable saved-group identity or a saved flag. Closure neither manages saved groups nor treats saved/collapsed/shared status as protection. Explicitly check any group you want to keep. Restoring creates ordinary groups, not saved groups, and never overwrites a different existing group.
 
 ## Privacy and permissions
 

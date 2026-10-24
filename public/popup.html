@@ -3,22 +3,32 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Quiet Archive</title>
+    <title>Closure</title>
+    <link rel="icon" href="icons/32.png" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="popup">
     <header class="brand">
-      <span class="mark">q</span>
+      <img
+        class="brand-icon"
+        src="icons/48.png"
+        alt=""
+        width="34"
+        height="34"
+      />
       <div>
-        <h1>Quiet Archive</h1>
-        <p>A little room to think.</p>
+        <h1>Closure</h1>
+        <p>Let tabs go, gently.</p>
       </div>
-      <span id="live" class="pill">On</span>
+      <span id="live" class="live-status">On</span>
     </header>
     <main>
-      <section class="card">
+      <section class="card auto-card">
         <div class="section-heading">
-          <h2>Auto archive</h2>
+          <div>
+            <h2>Auto archive</h2>
+            <p id="after-text" class="muted">After 24 hours of inactivity</p>
+          </div>
           <label class="switch"
             ><input
               type="checkbox"
@@ -26,14 +36,64 @@
               aria-label="Enable auto archive" /><span></span
           ></label>
         </div>
-        <p class="muted">Move quiet tabs out of your way.</p>
-        <label class="field" for="interval">Archive after inactivity</label
-        ><select id="interval">
-          <option value="1440">24 hours</option>
-          <option value="10080">7 days</option>
-          <option value="43200">30 days</option>
-          <option value="custom">Custom time…</option>
-        </select>
+        <div
+          id="presets"
+          class="pills"
+          role="group"
+          aria-label="Archive after inactivity"
+        >
+          <button
+            class="pill"
+            data-minutes="60"
+            aria-label="1 hour"
+            aria-pressed="false"
+          >
+            1h</button
+          ><button
+            class="pill"
+            data-minutes="240"
+            aria-label="4 hours"
+            aria-pressed="false"
+          >
+            4h</button
+          ><button
+            class="pill"
+            data-minutes="720"
+            aria-label="12 hours"
+            aria-pressed="false"
+          >
+            12h</button
+          ><button
+            class="pill"
+            data-minutes="1440"
+            aria-label="24 hours"
+            aria-pressed="true"
+          >
+            24h</button
+          ><button
+            class="pill"
+            data-minutes="10080"
+            aria-label="7 days"
+            aria-pressed="false"
+          >
+            7d</button
+          ><button
+            class="pill"
+            data-minutes="43200"
+            aria-label="30 days"
+            aria-pressed="false"
+          >
+            30d
+          </button>
+        </div>
+        <button
+          id="custom-time"
+          class="link custom-link"
+          aria-expanded="false"
+          aria-controls="custom-row"
+        >
+          Custom time…
+        </button>
         <div id="custom-row" class="inline" hidden>
           <input
             id="custom-value"
@@ -46,54 +106,63 @@
             <option value="1">minutes</option>
             <option value="60">hours</option>
             <option value="1440">days</option></select
-          ><button id="apply-time" class="small">Apply</button>
+          ><button id="apply-time" class="btn-soft">Apply</button>
         </div>
       </section>
-      <section class="card">
-        <h2>Always keep</h2>
-        <p class="muted">Active, pinned and selected tabs stay open.</p>
+      <section class="card keep-card">
+        <p class="keep-heading">
+          Always keep · active, pinned and selected tabs too
+        </p>
         <label class="setting"
           ><span
             >Tabs playing audio<small>Keep music and calls around</small></span
-          ><input type="checkbox" id="protectAudio" role="switch" /></label
-        ><label class="setting"
+          ><input type="checkbox" id="protectAudio" role="switch"
+        /></label>
+        <label class="setting"
           ><span>Ungrouped tabs<small>Protect tabs outside a group</small></span
-          ><input type="checkbox" id="protectUngrouped" role="switch" /></label
-        ><label class="setting"
+          ><input type="checkbox" id="protectUngrouped" role="switch"
+        /></label>
+        <label class="setting"
           ><span
             >Archive notifications<small>With a shortcut to Undo</small></span
           ><input type="checkbox" id="notifications" role="switch"
         /></label>
       </section>
-      <section class="card">
+      <section class="card groups-card">
         <div class="section-heading">
           <h2>Protected groups</h2>
-          <span id="group-count" class="muted"></span>
+          <span id="group-count" class="muted">0</span>
         </div>
-        <p class="muted">Choose the groups you want to keep.</p>
-        <div id="groups"></div>
-        <p class="micro">
-          Rules follow a group’s name + color across restarts. Identical groups
-          share protection. Saved Tab Groups are separate.
-        </p>
+        <div id="groups" class="group-chips"></div>
+        <details class="group-help">
+          <summary>How protection follows groups</summary>
+          <p>
+            Rules match a group’s exact name + color across restarts. Identical
+            groups share protection. Saved Tab Groups are separate.
+          </p>
+        </details>
       </section>
-      <div class="safety-note">
-        <span>◈</span>
-        <p>Unsaved edits and pages we can’t verify stay open.</p>
-      </div>
       <section id="undo-panel" class="undo" hidden>
         <div>
-          <strong>Room made.</strong>
+          <strong>Tabs put away.</strong>
           <p id="undo-copy"></p>
         </div>
-        <button id="undo" class="small">Undo</button>
+        <button id="undo" class="btn-soft">Undo</button>
       </section>
       <p id="status" role="status" aria-live="polite"></p>
       <footer>
         <button id="archive" class="primary">
-          Open archive <span id="archive-count">0</span><span>↗</span></button
-        ><button id="scan" class="text-button">Check tabs now</button>
-        <p id="last-scan" class="micro"></p>
+          <span>Open archive</span
+          ><span id="archive-count" class="count">0</span>
+        </button>
+        <div class="check-footer">
+          <button id="scan" class="link">Check tabs now</button
+          ><span>· checks every minute</span>
+        </div>
+        <p class="safety-note">
+          Unsaved edits and unverifiable pages stay open.
+        </p>
+        <p id="last-scan" class="sr-only"></p>
       </footer>
     </main>
     <script src="popup.js"></script>

@@ -210,10 +210,10 @@ async function ensureAlarm() {
     await chrome.alarms.create(ALARM, { periodInMinutes: 1 });
 }
 function report(error: unknown) {
-  console.error("Quiet Archive:", error);
+  console.error("Closure:", error);
   void chrome.action.setBadgeText({ text: "!" });
   void chrome.action.setBadgeBackgroundColor({ color: "#b45309" });
-  void chrome.action.setTitle({ title: `Quiet Archive: ${String(error)}` });
+  void chrome.action.setTitle({ title: `Closure: ${String(error)}` });
 }
 async function runScan() {
   try {

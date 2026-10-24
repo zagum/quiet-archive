@@ -4,7 +4,7 @@ Automated commands and scope are in README. The browser test uses a new temporar
 
 ## Manual acceptance in Developer Mode
 
-1. Load `dist/` in a fresh Chrome profile. Open popup: English labels, default 24 hours, audio protected, ungrouped eligible, archive empty.
+1. Load `dist/` in a fresh Chrome profile. Open popup: English labels, default 24h, audio protected, ungrouped eligible, archive empty.
 2. Create two ordinary groups with different title/color signatures. Check one. Reopen popup and ensure its rule persists. Close and recreate that group: protection applies. Duplicate its title/color in another window: both must be protected. Rename/recolor the protected live group: its new signature must remain protected.
 3. Configure Custom = 1 minute. Open several ordinary web pages, visit one in each normal window, pin another, edit a form on another, start audio on another, and leave others inactive. Ensure safety guards were present when documents loaded. After a minute plus the next scheduled check, only eligible untouched pages should disappear.
 4. Edit an input inside an iframe or add a beforeunload handler: the whole tab must remain. Restricted pages, pages loaded before extension install, discarded tabs and blocked site access must be skipped.

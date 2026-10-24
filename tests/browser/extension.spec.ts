@@ -54,13 +54,18 @@ test("real MV3 popup, safe close, archive search, bulk restore, Undo and restart
   const popup = await context.newPage();
   popup.on("pageerror", (e) => errors.push(e.message));
   await popup.goto(`chrome-extension://${id}/popup.html`);
-  await expect(
-    popup.getByRole("heading", { name: "Quiet Archive" }),
-  ).toBeVisible();
+  await expect(popup.getByRole("heading", { name: "Closure" })).toBeVisible();
   await expect(popup.locator("#enabled")).toBeChecked();
-  await popup.locator("#interval").selectOption("10080");
+  await popup.getByRole("button", { name: "7 days", exact: true }).click();
+  await expect(
+    popup.getByRole("button", { name: "7 days", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await popup.getByRole("button", { name: "30 days", exact: true }).click();
+  await expect(
+    popup.getByRole("button", { name: "30 days", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(popup.locator("#status")).toContainText("Saved");
-  await popup.locator("#interval").selectOption("custom");
+  await popup.locator("#custom-time").click();
   await popup.locator("#custom-value").fill("1");
   await popup.locator("#apply-time").click();
   await expect(popup.locator("#status")).toContainText("Saved");
@@ -141,7 +146,7 @@ test("real MV3 popup, safe close, archive search, bulk restore, Undo and restart
       batchId: "visual",
       title,
       url,
-      closedAt: Date.now() - i * 3600000,
+      closedAt: new Date().getTime() - i * 3600000,
       lastActiveAt: Date.now() - 86400000,
       sourceTabId: 0,
       sourceWindowId: tab.windowId,
@@ -162,19 +167,37 @@ test("real MV3 popup, safe close, archive search, bulk restore, Undo and restart
   });
   await archive.reload();
   await expect(archive.locator(".archive-row")).toHaveCount(3);
-  await archive.setViewportSize({ width: 1400, height: 1000 });
+  await archive.setViewportSize({ width: 1280, height: 800 });
+  await archive.bringToFront();
   if (process.env.UPDATE_SCREENSHOTS === "1")
     await archive.screenshot({
       path: "docs/screenshots/archive.png",
-      fullPage: true,
+      fullPage: false,
+      animations: "disabled",
     });
   await popup.reload();
-  await popup.setViewportSize({ width: 380, height: 920 });
+  await popup.setViewportSize({ width: 360, height: 850 });
+  await expect(popup.locator("#after-text")).toHaveText(
+    "After 1 minute of inactivity",
+  );
+  await expect(popup.locator(".pill[aria-pressed=true]")).toHaveCount(0);
+  await popup.bringToFront();
   if (process.env.UPDATE_SCREENSHOTS === "1")
     await popup.screenshot({
       path: "docs/screenshots/popup.png",
       fullPage: true,
+      animations: "disabled",
     });
+  await expect(
+    archive.getByRole("heading", { name: "Today", exact: true }),
+  ).toBeVisible();
+  await archive.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await archive.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await archive.setViewportSize({ width: 1280, height: 800 });
   await archive.locator("#restore-all").click();
   await expect(archive.locator("#status")).toContainText("3 restored");
   await expect(archive.locator(".archive-row")).toHaveCount(0);
