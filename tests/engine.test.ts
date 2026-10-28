@@ -6,12 +6,13 @@ import {
   type Tab,
   type State,
   type Entry,
+  type Safety,
 } from "../src/model.js";
 const now = 2_000_000_000;
 function setup() {
   let disk = initialState();
   let failSave = false;
-  let safe = true;
+  let safe: Safety = "safe";
   let removeFails = false;
   let creates = 0;
   const tabs = new Map<number, Tab>([
@@ -70,7 +71,7 @@ function setup() {
       failSave = true;
     },
     unsafe: () => {
-      safe = false;
+      safe = "unsafe";
     },
     cancel: () => {
       removeFails = true;
@@ -229,4 +230,48 @@ test("does not starve eligible tabs behind more than 2000 protected tabs", async
   await x.engine.scan();
   assert.equal(x.tabs.has(2001), false);
   assert.equal(x.tabs.size, 2000);
+});
+
+test("opt-in archives sleeping unknown tabs but strict mode keeps them", async () => {
+  for (const allow of [false, true]) {
+    const x = setup();
+    x.setDisk({
+      ...initialState(),
+      settings: { ...initialState().settings, archiveUnverifiable: allow },
+    });
+    x.tabs.get(1)!.discarded = true;
+    x.tabs.get(1)!.status = "unloaded";
+    x.port.safe = async () => "unknown";
+    await x.engine.scan();
+    assert.equal(x.tabs.size, allow ? 0 : 1);
+    assert.equal(x.disk().archive.length, allow ? 1 : 0);
+  }
+});
+test("opt-in keeps detected edits and pinned tabs", async () => {
+  const x = setup();
+  x.setDisk({
+    ...initialState(),
+    settings: { ...initialState().settings, archiveUnverifiable: true },
+  });
+  x.unsafe();
+  await x.engine.scan();
+  assert.equal(x.tabs.size, 1);
+  assert.equal(x.disk().stats?.["unsaved changes"], 1);
+  x.port.safe = async () => "unknown";
+  x.tabs.get(1)!.pinned = true;
+  await x.engine.scan();
+  assert.equal(x.tabs.size, 1);
+});
+test("fresh safety check catches edits after an unknown preflight", async () => {
+  const x = setup();
+  x.setDisk({
+    ...initialState(),
+    settings: { ...initialState().settings, archiveUnverifiable: true },
+  });
+  x.tabs.get(1)!.discarded = true;
+  let checks = 0;
+  x.port.safe = async () => (++checks === 1 ? "unknown" : "unsafe");
+  await x.engine.scan();
+  assert.equal(x.tabs.size, 1);
+  assert.equal(x.disk().archive.length, 0);
 });

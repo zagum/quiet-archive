@@ -104,6 +104,8 @@ test("real MV3 popup, safe close, archive search, bulk restore, Undo and restart
   });
   await popup.locator("#scan").click();
   await expect(popup.locator("#status")).toContainText("Check complete");
+  await popup.getByText("Why tabs stayed open", { exact: true }).click();
+  await expect(popup.locator("#scan-reasons")).toContainText("unsaved changes");
   await expect.poll(() => clean.isClosed()).toBe(true);
   expect(clean2.isClosed()).toBe(true);
   expect(dirty.isClosed()).toBe(false);
@@ -285,4 +287,100 @@ test("group recreation and rename protection survive worker stop; failed Undo is
   await popup.locator("#undo").click();
   await expect(popup.locator("#status")).toContainText("1 kept in archive");
   await expect(popup.locator("#archive-count")).toHaveText("1");
+});
+test("opt-in archives sleeping tabs, preserves detected edits after discard, and offers Undo", async () => {
+  await context.close();
+  await launch();
+  const popup = await context.newPage();
+  await popup.goto(`chrome-extension://${id}/popup.html`);
+  const sleeping = await context.newPage();
+  await sleeping.goto(`${base}/Sleeping`);
+  const dirty = await context.newPage();
+  await dirty.goto(`${base}/Remembered-draft`);
+  await dirty.getByRole("textbox", { name: "Draft" }).fill("Keep this draft");
+  const pinned = await context.newPage();
+  await pinned.goto(`${base}/Still-pinned`);
+  const protectedPage = await context.newPage();
+  await protectedPage.goto(`${base}/Protected-sleeper`);
+  await worker.evaluate(async () => {
+    const tabs = await chrome.tabs.query({});
+    await chrome.tabs.update(
+      tabs.find((t) => t.title === "Still-pinned")!.id!,
+      { pinned: true },
+    );
+    const groupId = await chrome.tabs.group({
+      tabIds: [tabs.find((t) => t.title === "Protected-sleeper")!.id!],
+    });
+    await chrome.tabGroups.update(groupId, {
+      title: "Renamed notes",
+      color: "purple" as chrome.tabGroups.Color,
+    });
+  });
+  await popup.bringToFront();
+  await worker.evaluate(async () => {
+    const tab = (await chrome.tabs.query({})).find(
+      (t) => t.title === "Sleeping",
+    )!;
+    await chrome.tabs.discard(tab.id!);
+    const original = Date.now;
+    Date.now = () => original() + 2 * 86400000;
+  });
+  await popup.locator("#scan").click();
+  await expect(popup.locator("#status")).toContainText("Check complete");
+  // Discard destroys the renderer target, so Playwright Page.isClosed() cannot
+  // distinguish discarding from tab removal. Assert the actual Chrome tab.
+  expect(
+    (await worker.evaluate(() => chrome.tabs.query({}))).find((t) =>
+      t.url?.endsWith("/Sleeping"),
+    )?.discarded,
+  ).toBe(true);
+  expect(
+    (await worker.evaluate(() => chrome.tabs.query({}))).some((t) =>
+      t.url?.endsWith("/Remembered-draft"),
+    ),
+  ).toBe(true);
+  await worker.evaluate(async () => {
+    const tab = (await chrome.tabs.query({})).find(
+      (t) => t.title === "Remembered-draft",
+    )!;
+    await chrome.tabs.discard(tab.id!);
+  });
+  // The unsafe latch must outlive worker suspension and renderer discarding.
+  const cdp = await context.newCDPSession(popup);
+  await cdp.send("ServiceWorker.enable");
+  await cdp.send("ServiceWorker.stopAllWorkers");
+  await popup.reload();
+  await expect(popup.locator("#enabled")).toBeChecked();
+  worker =
+    context.serviceWorkers().find((w) => w.url().includes(id)) ??
+    (await context.waitForEvent("serviceworker"));
+  await worker.evaluate(() => {
+    const original = Date.now;
+    Date.now = () => original() + 2 * 86400000;
+  });
+  await popup.locator("#archiveUnverifiable").check();
+  await expect(popup.locator("#status")).toContainText("Saved");
+  await popup.locator("#scan").click();
+  await expect(popup.locator("#status")).toContainText("Check complete");
+  await expect
+    .poll(async () =>
+      (await worker.evaluate(() => chrome.tabs.query({}))).some((t) =>
+        t.url?.endsWith("/Sleeping"),
+      ),
+    )
+    .toBe(false);
+  expect(
+    (await worker.evaluate(() => chrome.tabs.query({}))).some((t) =>
+      t.url?.endsWith("/Remembered-draft"),
+    ),
+  ).toBe(true);
+  expect(pinned.isClosed()).toBe(false);
+  expect(protectedPage.isClosed()).toBe(false);
+  await popup.locator("#undo").click();
+  await expect(popup.locator("#status")).toContainText("1 restored");
+  expect(
+    (await worker.evaluate(() => chrome.tabs.query({}))).some((t) =>
+      t.url?.endsWith("/Sleeping"),
+    ),
+  ).toBe(true);
 });

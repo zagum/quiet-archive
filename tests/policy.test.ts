@@ -134,3 +134,38 @@ test("only restores safe http(s) URLs without embedded credentials", () => {
     assert.equal(safeUrl(url), false);
   assert.equal(safeUrl("https://example.com/a?q=x#b"), true);
 });
+
+test("old settings stay strict and explicit opt-in allows only stable sleeping tabs", () => {
+  assert.equal(validateSettings({}).archiveUnverifiable, false);
+  assert.throws(() => validateSettings({ archiveUnverifiable: "yes" }));
+  const settings = { ...defaults, archiveUnverifiable: true };
+  assert.equal(
+    eligible(
+      { ...tab, discarded: true, status: "unloaded" },
+      settings,
+      undefined,
+      undefined,
+      now,
+    ).ok,
+    true,
+  );
+  assert.equal(
+    eligible({ ...tab, frozen: true }, settings, undefined, undefined, now).ok,
+    true,
+  );
+  assert.equal(
+    eligible({ ...tab, status: "loading" }, settings, undefined, undefined, now)
+      .ok,
+    false,
+  );
+  assert.equal(
+    eligible(
+      { ...tab, discarded: true, active: true },
+      settings,
+      undefined,
+      undefined,
+      now,
+    ).ok,
+    false,
+  );
+});

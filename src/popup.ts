@@ -20,6 +20,7 @@ async function refresh() {
   for (const key of [
     "enabled",
     "protectAudio",
+    "archiveUnverifiable",
     "protectUngrouped",
     "notifications",
   ] as const)
@@ -50,6 +51,17 @@ async function refresh() {
   $("last-scan").textContent = state.lastScan
     ? `Last checked ${date(state.lastScan)}`
     : "Checks every minute while Chrome is running";
+  $("safety-note").textContent = s.archiveUnverifiable
+    ? "Unverifiable tabs may close. Only URLs are saved; drafts may be lost. Detected edits stay open."
+    : "Unsaved edits and unverifiable pages stay open.";
+  const reasons = $("scan-reasons");
+  reasons.replaceChildren();
+  for (const [reason, count] of Object.entries(state.stats ?? {}))
+    reasons.append(text("li", `${count} · ${reason}`));
+  if (!reasons.children.length)
+    reasons.append(
+      text("li", state.lastScan ? "No tabs were skipped." : "No check yet."),
+    );
   const list = $("groups");
   list.replaceChildren();
   const liveKeys = new Set<string>();
@@ -120,6 +132,7 @@ async function patch(value: Partial<Settings>) {
 for (const key of [
   "enabled",
   "protectAudio",
+  "archiveUnverifiable",
   "protectUngrouped",
   "notifications",
 ] as const)
@@ -174,7 +187,7 @@ $("scan").addEventListener(
       status("Checking tabs safely…");
       await request("scan");
       await refresh();
-      status("Check complete. Protected and unverifiable tabs stayed open.");
+      status("Check complete. Protection rules applied.");
     }),
 );
 $("undo").addEventListener(

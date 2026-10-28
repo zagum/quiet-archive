@@ -28,10 +28,12 @@ export interface GroupRule {
   title: string;
   color: Group["color"];
 }
+export type Safety = "safe" | "unsafe" | "unknown";
 export interface Settings {
   enabled: boolean;
   inactivityMinutes: number;
   protectAudio: boolean;
+  archiveUnverifiable: boolean;
   protectUngrouped: boolean;
   notifications: boolean;
   protectedGroups: GroupRule[];
@@ -40,6 +42,7 @@ export const defaults: Settings = {
   enabled: true,
   inactivityMinutes: 1440,
   protectAudio: true,
+  archiveUnverifiable: false,
   protectUngrouped: false,
   notifications: true,
   protectedGroups: [],

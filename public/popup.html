@@ -128,6 +128,16 @@
           ><input type="checkbox" id="notifications" role="switch"
         /></label>
       </section>
+      <section class="card keep-card">
+        <label class="setting"
+          ><span
+            >Archive unverifiable tabs<small
+              >Include sleeping tabs. Drafts may be lost; only URLs are
+              saved.</small
+            ></span
+          ><input type="checkbox" id="archiveUnverifiable" role="switch"
+        /></label>
+      </section>
       <section class="card groups-card">
         <div class="section-heading">
           <h2>Protected groups</h2>
@@ -159,10 +169,19 @@
           <button id="scan" class="link">Check tabs now</button
           ><span>· checks every minute</span>
         </div>
-        <p class="safety-note">
+        <p class="safety-note" id="safety-note">
           Unsaved edits and unverifiable pages stay open.
         </p>
-        <p id="last-scan" class="sr-only"></p>
+        <details class="group-help" id="diagnostics">
+          <summary>Why tabs stayed open</summary>
+          <p id="last-scan" class="muted"></p>
+          <ul id="scan-reasons"></ul>
+          <p>
+            Sleeping tabs and pages without a safety guard are kept unless
+            Archive unverifiable tabs is enabled. Protected tabs stay open even
+            after the time limit.
+          </p>
+        </details>
       </footer>
     </main>
     <script src="popup.js"></script>

@@ -31,7 +31,7 @@ npm run install:chrome -- --dry-run
 
 ## Вариант 2: готовый ZIP без npm
 
-Скачайте **оба файла** из [релиза](https://github.com/zagum/quiet-archive/releases/tag/v1.1.0):
+Скачайте **оба файла** из [релиза](https://github.com/zagum/quiet-archive/releases/latest):
 
 - `closure-chrome.zip` — готовая сборка;
 - `install_chrome.py` — самостоятельный установщик.

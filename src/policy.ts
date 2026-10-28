@@ -25,6 +25,7 @@ export function validateSettings(value: unknown): Settings {
   for (const key of [
     "enabled",
     "protectAudio",
+    "archiveUnverifiable",
     "protectUngrouped",
     "notifications",
   ] as const) {
@@ -92,9 +93,8 @@ export function eligible(
   else if (!tab.url || !safeUrl(tab.url)) reason = "unsupported URL";
   else if (
     tab.pendingUrl ||
-    tab.status !== "complete" ||
-    tab.discarded ||
-    tab.frozen
+    (!tab.discarded && tab.status !== "complete") ||
+    ((tab.discarded || tab.frozen) && !s.archiveUnverifiable)
   )
     reason = "unavailable / loading";
   else if (s.protectAudio && tab.audible) reason = "audio";

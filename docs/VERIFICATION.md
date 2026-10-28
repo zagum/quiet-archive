@@ -33,3 +33,16 @@ Added the standalone Python 3.10+ installer, ZIP and built-source inputs, OS-spe
 - Strict TypeScript checking, production build and formatting checks: passed.
 - Read-only real-package dry-run selected the existing `Unpacked Extensions/Quiet Archive` directory; no installed Chrome files changed.
 - Independent review found a case-insensitive profile-path bypass; a regression test reproduced it, then passed after case/Unicode-normalized boundary checks.
+
+## Sleeping tabs and background recovery — 2026-10-28 (1.2.0)
+
+A local diagnostic export from the user's installed 1.1.0 showed 25 unavailable/sleeping tabs skipped, 2 unsaved/unverifiable, 13 recent, and protected groups/pinned tabs. The selected 12-hour timer was running; strict safety prevented old discarded pages from being archived. Chrome also reported a transient No current window error.
+
+- Explicit opt-in Archive unverifiable tabs defaults off, preserving existing profile behavior. The user approved enabling it for their installation; URL-only/draft-loss limitations are visible in the popup and README.
+- Strict TypeScript, production build, full Node suite (45 tests), installer suite (14 tests), formatting and whitespace checks passed.
+- Three real MV3 browser scenarios passed, including native tabs.discard, strict-mode retention, opt-in close and Undo, preserved pinned/groups, and unsafe latches surviving discard plus service worker stop.
+- Startup/current-window failure and recovery regressions were observed failing before fixes. Successful manual checks now clear the stale toolbar error immediately.
+- Independent code review found no blocking defects and noted the stale manual-scan toolbar issue; a failing regression demonstrated it and the shared scan path fixed it.
+- Browser fixtures use actual Chrome tab existence rather than Playwright Page.isClosed for discarded pages: renderer destruction is not tab closure.
+
+Installed into the same permanent Chrome directory and reloaded in both real profiles, retaining extension ID and their existing 12-hour settings/group rules. Manual checks visibly archived 22 tabs in Wabi and 6 in Personal, with Undo available; Wabi (pink) and Personal (orange) stayed checked as protected. No page reloads were forced.

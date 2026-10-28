@@ -31,7 +31,7 @@ The command builds the extension and places it in `Unpacked Extensions/Closure` 
 
 **First time:** open `chrome://extensions`, enable **Developer mode**, click **Load unpacked**, and select the exact directory printed by the installer. **Updates:** rerun the command and click **Reload** on the existing extension card. Chrome confirms first registration in its UI; the script installs files and does not silently register extensions or edit browser preferences.
 
-For a ready-built ZIP, download `install_chrome.py` and `closure-chrome.zip` from [Releases](https://github.com/zagum/quiet-archive/releases/tag/v1.1.0), put them together, then run:
+For a ready-built ZIP, download `install_chrome.py` and `closure-chrome.zip` from [Releases](https://github.com/zagum/quiet-archive/releases/latest), put them together, then run:
 
 ```sh
 python3 install_chrome.py --zip closure-chrome.zip
@@ -54,13 +54,14 @@ npm run check
 
 Then load the repository’s **`dist/`** folder using the same Developer Mode steps. After changing the source, run `npm run build` and click Reload on the extension card. Keep the folder in a stable location so the unpacked extension keeps its identity and local data.
 
-**After first installation or extension reload, existing loaded pages may need a normal page reload to gain the safety guard. Until then they are skipped.** The extension never reloads your pages itself.
+**After first installation or extension reload, existing loaded pages may need a normal page reload to gain the safety guard. In strict mode they are skipped. The optional **Archive unverifiable tabs** setting allows such pages to close, with the URL-only recovery risk described below.** The extension never reloads your pages itself.
 
 ## Use
 
 - Choose a time pill (**1h, 4h, 12h, 24h, 7d or 30d**) or **Custom time…** for a custom whole-minute duration (1 minute to 365 days).
 - Enable **Tabs playing audio** to protect audible tabs. Muted tabs are protected only if Chrome reports them as audible. Active, pinned and selected tabs in every window always stay open.
 - Enable **Ungrouped tabs** to keep tabs outside any group. With it off, eligible ungrouped tabs are archived normally.
+- **Archive unverifiable tabs** is off by default. Enable it to include sleeping tabs and pages whose state cannot be checked; only their URLs can be restored, so drafts or browser-restored form state may be lost. Detected edits remain protected.
 - Select groups under **Protected groups**. Rules persist even when the group or its window closes.
 - **Open archive** to search titles, URLs and group names, restore one entry, select several, or restore everything.
 - **Undo** in the popup/archive restores the most recent automatic batch still in the archive. Optional notifications provide an Undo button; if the OS hides it, use the popup.
@@ -70,15 +71,17 @@ Checks run approximately once a minute while Chrome runs, in batches of up to 50
 
 ## Safety and limits
 
-Closure is conservative: unknown safety means **keep open**.
+Closure defaults to strict safety: unknown safety means **keep open**. The explicit **Archive unverifiable tabs** option allows unknown HTTP(S) pages to close after the inactivity limit. It never overrides detected edits, active/pinned/selected tabs, protected groups or enabled audio protection.
 
-- Skips active, pinned, highlighted, incognito, loading, navigating, discarded and frozen tabs, non-normal windows, and non-HTTP(S) URLs (including `chrome://`, `file://`, Chrome Web Store restricted pages and extension pages).
+- Always skips active, pinned, highlighted, incognito, loading and navigating tabs, non-normal windows, and non-HTTP(S) URLs (including `chrome://`, `file://` and extension pages).
 - A local document-start guard records form/contenteditable edits and `beforeunload` registration. Any edit or registered listener protects that document until navigation/reload, even if the app later autosaves. This intentionally errs toward keeping tabs.
-- Before closing, every frame must have a matching document ID and a positive safety probe. Missing permission, sandboxed/restricted frames, navigation, uninstrumented pages and failed probes cause a skip. The extension does not wake discarded pages to inspect them.
+- In strict mode, every frame must have a matching document ID and a positive safety probe. Missing guards/permission, inaccessible frames, failed probes, discarded and frozen tabs cause a skip. With **Archive unverifiable tabs** enabled, those unknown-state HTTP(S) tabs can be archived without waking them. Restricted non-HTTP(S) pages remain excluded. Detected unsafe state is remembered in session storage across worker suspension and later discarding, until main-frame navigation or tab closure; these latches reset on a full browser restart. An unobserved edit before discarding or restart cannot be inferred, so this option can lose drafts. Archive entries closed without verification are labeled.
 - There is **no universal Chrome API for unsaved application state**. Canvas editors, unusual app state, closed shadow DOM, programmatic edits, page scripts replacing instrumentation, or a change in the narrow gap between the final check and `tabs.remove` cannot be ruled out. Protection reduces risk; it is not a guarantee. Protect important editing groups or pause auto archive when using such apps. Native unload dialogs are never bypassed.
 - The archive stores **URLs, titles, timestamps and ordinary group metadata**, not form contents, scroll position, navigation history, cookies or page sessions. Restoring opens the URL anew. Browser Undo/closed-tab history is separate.
 - Archive is written **before** removal. If storage cannot be written, closure stops. Successful restoration removes the entry; failures retain it. An interrupted restore with uncertain creation is preserved with a warning, and is never retried automatically. Check open tabs before retrying it.
 - Data is not automatically pruned. Uninstalling the extension or deleting its profile removes local data. Export before either action. Available disk space still limits storage.
+
+**Why tabs stayed open** in the popup shows the last scan time and skip counts. A time limit does not override protection. Sleeping pages commonly explain an empty archive in strict mode. Background checks recover after temporary startup failures and do not require a focused/current window.
 
 See [edge cases and recovery](docs/EDGE_CASES.md) and [manual test guide](docs/TESTING.md).
 
@@ -103,7 +106,7 @@ No analytics, external requests, remote scripts, server, sync storage or account
 | `webNavigation`               | Verify complete frame/document coverage before closure                          |
 | `http://*/*`, `https://*/*`   | Install safety guard on ordinary web pages and inspect all frames               |
 
-Chrome’s broad website-access warning is caused by the local safety guard. If site access is restricted, affected pages are skipped. Opening restored websites causes the normal browser requests for those websites; the extension itself has no network backend. Extension storage is restricted to trusted extension contexts.
+Chrome’s broad website-access warning is caused by the local safety guard. If site access is restricted, affected pages are skipped in strict mode; Archive unverifiable tabs allows URL-only archiving of those HTTP(S) pages. Opening restored websites causes the normal browser requests for those websites; the extension itself has no network backend. Extension storage is restricted to trusted extension contexts.
 
 ## Development and tests
 

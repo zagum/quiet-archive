@@ -5,6 +5,7 @@ import {
   type Tab,
   type Entry,
   type Group,
+  type Safety,
 } from "./model.js";
 import { groupKey, validateSettings } from "./policy.js";
 const ALARM = "quiet-archive-scan";
@@ -13,6 +14,7 @@ interface Session {
   id: string;
   activity: Record<string, number>;
   bindings: Record<string, string>;
+  unsafe: Record<string, boolean>;
 }
 const latestGroupKeys = new Map<number, string>();
 let session: Session;
@@ -44,10 +46,14 @@ async function load(): Promise<State> {
     );
   return { ...state, settings: validateSettings(state.settings) } as State;
 }
-async function safe(tabId: number): Promise<boolean> {
+async function safe(tabId: number): Promise<Safety> {
+  if (session.unsafe[tabId]) return "unsafe";
   try {
+    const tab = await getTab(tabId);
+    // Do not wake discarded/frozen pages to inspect them.
+    if (!tab || tab.discarded || tab.frozen) return "unknown";
     const before = await chrome.webNavigation.getAllFrames({ tabId });
-    if (!before?.length) return false;
+    if (!before?.length) return "unknown";
     const results = await chrome.scripting.executeScript({
       target: { tabId, allFrames: true },
       world: "MAIN",
@@ -57,12 +63,23 @@ async function safe(tabId: number): Promise<boolean> {
             __quietArchiveProbeV1?: () => { safe: boolean };
           }
         ).__quietArchiveProbeV1;
-        return typeof probe === "function" && probe().safe === true;
+        if (typeof probe !== "function") return "unknown";
+        return probe().safe === true ? "safe" : "unsafe";
       },
     });
+    // Remember detected edits across worker suspension and later tab discarding.
+    if (results.some((r) => r.result === "unsafe")) {
+      try {
+        await sessionChange(() => {
+          session.unsafe[tabId] = true;
+        });
+      } catch (error) {
+        report(error);
+      } // A failed latch write must never turn unsafe into unknown.
+      return "unsafe";
+    }
     const after = await chrome.webNavigation.getAllFrames({ tabId });
-    return (
-      !!after &&
+    return after &&
       before.length === after.length &&
       results.length === after.length &&
       after.every(
@@ -74,12 +91,13 @@ async function safe(tabId: number): Promise<boolean> {
             (r) =>
               r.frameId === f.frameId &&
               r.documentId === f.documentId &&
-              r.result === true,
+              r.result === "safe",
           ),
       )
-    );
+      ? "safe"
+      : "unknown";
   } catch {
-    return false;
+    return "unknown";
   }
 }
 async function create(e: Entry): Promise<number> {
@@ -113,7 +131,32 @@ async function create(e: Entry): Promise<number> {
     return (await chrome.tabs.create({ url: e.url, active: false })).id!;
   }
 }
-const ready = (async () => {
+// tabGroups.query() can fail with "No current window" when a profile has no
+// focused window. Enumerate actual group IDs in this profile instead.
+async function allGroups(): Promise<Group[]> {
+  const tabs = await chrome.tabs.query({ windowType: "normal" });
+  const ids = [...new Set(tabs.map((t) => t.groupId).filter((id) => id >= 0))];
+  const groups = await Promise.all(
+    ids.map(async (id) => {
+      try {
+        return await chrome.tabGroups.get(id);
+      } catch {
+        return undefined;
+      } // Group/window closed during enumeration.
+    }),
+  );
+  return groups.filter((g): g is chrome.tabGroups.TabGroup => !!g);
+}
+let initializing: Promise<Engine> | undefined;
+function ready(): Promise<Engine> {
+  if (!initializing)
+    initializing = initialize().catch((error) => {
+      initializing = undefined; // A later alarm/window/message must be able to retry.
+      throw error;
+    });
+  return initializing;
+}
+async function initialize(): Promise<Engine> {
   await chrome.storage.local.setAccessLevel({
     accessLevel: "TRUSTED_CONTEXTS",
   });
@@ -124,9 +167,11 @@ const ready = (async () => {
     id: crypto.randomUUID(),
     activity: {},
     bindings: {},
+    unsafe: {},
   };
+  session.unsafe ??= {};
   const tabs = await chrome.tabs.query({});
-  const groups = await chrome.tabGroups.query({});
+  const groups = await allGroups();
   for (const t of tabs)
     if (
       t.id !== undefined &&
@@ -150,7 +195,7 @@ const ready = (async () => {
         .filter((t) => t.id !== undefined)
         .map(toTab),
     get: getTab,
-    groups: () => chrome.tabGroups.query({}),
+    groups: () => allGroups(),
     protectedGroup: (g, s) =>
       s.protectedGroups.some(
         (r) =>
@@ -204,7 +249,7 @@ const ready = (async () => {
   await engine.recover();
   await ensureAlarm();
   return engine;
-})();
+}
 async function ensureAlarm() {
   if (!(await chrome.alarms.get(ALARM)))
     await chrome.alarms.create(ALARM, { periodInMinutes: 1 });
@@ -215,10 +260,14 @@ function report(error: unknown) {
   void chrome.action.setBadgeBackgroundColor({ color: "#b45309" });
   void chrome.action.setTitle({ title: `Closure: ${String(error)}` });
 }
+async function checkTabs() {
+  await (await ready()).scan();
+  await chrome.action.setBadgeText({ text: "" });
+  await chrome.action.setTitle({ title: "Closure" });
+}
 async function runScan() {
   try {
-    await (await ready).scan();
-    await chrome.action.setBadgeText({ text: "" });
+    await checkTabs();
   } catch (error) {
     report(error);
   }
@@ -228,13 +277,23 @@ chrome.alarms.onAlarm.addListener((a) => {
   if (a.name === ALARM) void runScan();
 });
 chrome.runtime.onStartup.addListener(() => {
-  void ready.then(ensureAlarm).then(runScan).catch(report);
+  void ready().then(ensureAlarm).then(runScan).catch(report);
 });
 chrome.runtime.onInstalled.addListener(() => {
-  void ready.catch(report);
+  void ready().catch(report);
+});
+chrome.webNavigation.onCommitted.addListener((info) => {
+  if (info.frameId === 0)
+    void ready()
+      .then(() =>
+        sessionChange(() => {
+          delete session.unsafe[info.tabId];
+        }),
+      )
+      .catch(report);
 });
 chrome.tabs.onActivated.addListener((info) => {
-  void ready
+  void ready()
     .then(() =>
       sessionChange(() => {
         session.activity[info.tabId] = Date.now();
@@ -244,7 +303,7 @@ chrome.tabs.onActivated.addListener((info) => {
 });
 chrome.tabs.onUpdated.addListener((id, change) => {
   if (change.url)
-    void ready
+    void ready()
       .then(() =>
         sessionChange(() => {
           session.activity[id] = Date.now();
@@ -254,7 +313,7 @@ chrome.tabs.onUpdated.addListener((id, change) => {
 });
 chrome.tabs.onCreated.addListener((tab) => {
   if (tab.id !== undefined)
-    void ready
+    void ready()
       .then(() =>
         sessionChange(() => {
           session.activity[tab.id!] = Date.now();
@@ -263,19 +322,22 @@ chrome.tabs.onCreated.addListener((tab) => {
       .catch(report);
 });
 chrome.tabs.onRemoved.addListener((id) => {
-  void ready
+  void ready()
     .then(() =>
       sessionChange(() => {
         delete session.activity[id];
+        delete session.unsafe[id];
       }),
     )
     .catch(report);
 });
 chrome.tabs.onReplaced.addListener((added, removed) => {
-  void ready
+  void ready()
     .then(() =>
       sessionChange(() => {
         delete session.activity[removed];
+        if (session.unsafe[removed]) session.unsafe[added] = true;
+        delete session.unsafe[removed];
         session.activity[added] = Date.now();
       }),
     )
@@ -283,7 +345,7 @@ chrome.tabs.onReplaced.addListener((added, removed) => {
 });
 chrome.tabGroups.onCreated.addListener((g) => {
   latestGroupKeys.set(g.id, groupKey(g));
-  void ready
+  void ready()
     .then(() =>
       sessionChange(() => {
         session.bindings[g.id] = groupKey(g);
@@ -293,7 +355,7 @@ chrome.tabGroups.onCreated.addListener((g) => {
 });
 chrome.tabGroups.onUpdated.addListener((g) => {
   latestGroupKeys.set(g.id, groupKey(g));
-  void ready
+  void ready()
     .then(async (engine) => {
       const previous = session.bindings[g.id];
       const next = groupKey(g);
@@ -306,7 +368,7 @@ chrome.tabGroups.onUpdated.addListener((g) => {
 });
 chrome.tabGroups.onRemoved.addListener((g) => {
   latestGroupKeys.delete(g.id);
-  void ready
+  void ready()
     .then(() =>
       sessionChange(() => {
         delete session.bindings[g.id];
@@ -322,7 +384,7 @@ chrome.notifications.onClicked.addListener((id) => {
 });
 chrome.notifications.onButtonClicked.addListener((id, index) => {
   if (id === NOTIFICATION && index === 0)
-    void ready
+    void ready()
       .then(async (e) => {
         const s = await e.state();
         await e.restore(
@@ -341,18 +403,18 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
   )
     return false;
   void (async () => {
-    const engine = await ready;
+    const engine = await ready();
     switch (message?.type) {
       case "state":
         return {
           state: await engine.state(),
-          groups: await chrome.tabGroups.query({}),
+          groups: await allGroups(),
         };
       case "settings":
         await engine.updateSettings(message.patch);
         return {};
       case "scan":
-        await engine.scan();
+        await checkTabs();
         return {};
       case "restore":
         if (
@@ -373,4 +435,5 @@ chrome.runtime.onMessage.addListener((message, sender, reply) => {
     .catch((error) => reply({ ok: false, error: String(error) }));
   return true;
 });
-void ready.catch(report);
+void ensureAlarm().catch(report);
+void ready().catch(report);

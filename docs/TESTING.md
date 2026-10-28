@@ -7,7 +7,7 @@ Automated commands and scope are in README. The browser test uses a new temporar
 1. Load `dist/` in a fresh Chrome profile. Open popup: English labels, default 24h, audio protected, ungrouped eligible, archive empty.
 2. Create two ordinary groups with different title/color signatures. Check one. Reopen popup and ensure its rule persists. Close and recreate that group: protection applies. Duplicate its title/color in another window: both must be protected. Rename/recolor the protected live group: its new signature must remain protected.
 3. Configure Custom = 1 minute. Open several ordinary web pages, visit one in each normal window, pin another, edit a form on another, start audio on another, and leave others inactive. Ensure safety guards were present when documents loaded. After a minute plus the next scheduled check, only eligible untouched pages should disappear.
-4. Edit an input inside an iframe or add a beforeunload handler: the whole tab must remain. Restricted pages, pages loaded before extension install, discarded tabs and blocked site access must be skipped.
+4. Edit an input inside an iframe or add a beforeunload handler: the whole tab must remain. Restricted pages, pages loaded before extension install, discarded tabs and blocked site access must be skipped in strict mode.
 5. In archive, search title, URL and group. Select visible entries, then restore selected. Unselected entries stay. Restore one, then restore all. Successful restores remove entries; grouped entries regain ordinary group names/colors. Verify no source window ID is reused after a browser restart.
 6. Archive a batch and click Undo from popup, archive or notification. Optional OS notifications may hide buttons; popup must still offer Undo. Restore failures must be retained and reported.
 7. Stop the worker in chrome://serviceworker-internals (or wait for normal suspension), then use popup or wait for alarm. Reopen Chrome: settings/archive/protection persist and alarm exists. With Chrome <121 fallback times conservatively restart after browser restart.
@@ -16,3 +16,10 @@ Automated commands and scope are in README. The browser test uses a new temporar
 10. Inspect Network in extension DevTools: no requests to an extension backend. Inspect storage: form contents are absent. Export a backup, confirm JSON includes settings/archive and no form text.
 
 Known limits: not every SPA/canvas editor exposes unsaved state; Chrome API check/remove is not atomic; exact-once tab creation after a crash is impossible. These are described in README, not asserted as solved by tests.
+
+## Regression: sleeping tabs and initialization failures (1.2.0)
+
+- Leave Archive unverifiable tabs off: discarded/frozen/missing-guard tabs remain. Enable it: inactive sleeping HTTP(S) tabs archive, with an unverified-state note and working Undo. Active, pinned, selected, protected groups, audio protection, loading and internal URLs still win.
+- Let a scan observe a dirty form, then discard the tab and suspend the worker. With the option enabled, the known dirty tab stays open. Navigate its main frame and the old latch can clear. A browser restart resets session latches; this is an explicit risk of URL-only unverified archiving.
+- In the popup, expand Why tabs stayed open and inspect skip counts/last check time.
+- Close the last browser window, let a scheduled check run, reopen a window: popup and checks should recover. A transient initialization rejection must not permanently poison the worker.

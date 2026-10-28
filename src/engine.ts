@@ -1,4 +1,4 @@
-import type { Tab, Group, State, Entry, Settings } from "./model.js";
+import type { Tab, Group, State, Entry, Settings, Safety } from "./model.js";
 import {
   activityTime,
   eligible,
@@ -16,7 +16,7 @@ export interface Port {
   groups(): Promise<Group[]>;
   protectedGroup?(group: Group, settings: Settings): boolean;
   activity(id: number): Promise<number | undefined>;
-  safe(id: number): Promise<boolean>;
+  safe(id: number): Promise<Safety>;
   remove(id: number): Promise<void>;
   create(e: Entry): Promise<number>;
   group(id: number, e: Entry, map: Map<string, number>): Promise<void>;
@@ -67,6 +67,15 @@ export class Engine {
     if (group && this.p.protectedGroup?.(group, s))
       return { ok: false, reason: "protected group" };
     return eligible(tab, s, group, local, this.p.now());
+  }
+  private allowsSafety(result: Safety, settings: Settings): boolean {
+    return (
+      result === "safe" ||
+      (result === "unknown" && settings.archiveUnverifiable)
+    );
+  }
+  private async safe(id: number, settings: Settings): Promise<boolean> {
+    return this.allowsSafety(await this.p.safe(id), settings);
   }
   async recover(): Promise<void> {
     return this.serial(() => this.reconcile());
@@ -126,8 +135,9 @@ export class Engine {
           skip(check.reason);
           continue;
         }
-        if (!(await this.p.safe(candidate.id))) {
-          skip("unsaved / unverifiable");
+        const safety = await this.p.safe(candidate.id);
+        if (!this.allowsSafety(safety, s.settings)) {
+          skip(safety === "unsafe" ? "unsaved changes" : "unverifiable");
           continue;
         }
         const group = groups.find((g) => g.id === candidate.groupId);
@@ -144,6 +154,10 @@ export class Engine {
           index: candidate.index,
           group: group ? { ...group, key: groupKey(group) } : undefined,
           status: "pending",
+          note:
+            safety === "unknown"
+              ? "Archived without verifying page state. Only the URL can be restored."
+              : undefined,
         };
         s.archive.unshift(e);
         await this.p.save(s); // durable before any destructive call
@@ -160,7 +174,7 @@ export class Engine {
               freshGroups,
               await this.p.activity(candidate.id),
             ).ok ||
-            !(await this.p.safe(candidate.id))
+            !(await this.safe(candidate.id, s.settings))
           ) {
             s.archive = s.archive.filter((x) => x.id !== e.id);
             await this.p.save(s);
