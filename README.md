@@ -93,7 +93,7 @@ Chrome **Saved Tab Groups** are a different feature. Chrome’s public tabGroups
 
 ## Privacy and permissions
 
-No analytics, external requests, remote scripts, server, sync storage or account. Settings/archive use `chrome.storage.local` in the current profile; transient IDs and fallback activity use `chrome.storage.session`. Content scripts do not read or transmit form values: only boolean edit/unload safety signals are used. The guard executes in MAIN world to observe page `beforeunload` registrations; its interception can interact with pages that replace browser event APIs.
+No analytics, external requests, remote scripts, server, sync storage or account. Settings/archive use `chrome.storage.local` in the current profile; transient IDs and fallback activity use `chrome.storage.session`. Content scripts do not read or transmit form values: only boolean edit/unload safety signals are used. The guard executes in MAIN world to observe page `beforeunload` registrations; its interception can interact with pages that replace browser event APIs. It avoids forwarding window unload handlers that Chrome explicitly disallows via the document policy. Updates also apply this compatibility patch to existing live HTTP(S) pages without resetting their safety state. Chrome retains historical error-panel entries until they are cleared separately.
 
 | Permission                    | Purpose                                                                         |
 | ----------------------------- | ------------------------------------------------------------------------------- |

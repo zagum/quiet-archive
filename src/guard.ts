@@ -1,5 +1,7 @@
+import { patchBlockedUnload } from "./unload.js";
 // Runs in MAIN at document_start. Never reads or stores form contents.
 (() => {
+  patchBlockedUnload();
   if (Object.prototype.hasOwnProperty.call(window, "__quietArchiveProbeV1"))
     return;
   let edited = false;

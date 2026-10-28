@@ -46,3 +46,14 @@ A local diagnostic export from the user's installed 1.1.0 showed 25 unavailable/
 - Browser fixtures use actual Chrome tab existence rather than Playwright Page.isClosed for discarded pages: renderer destruction is not tab closure.
 
 Installed into the same permanent Chrome directory and reloaded in both real profiles, retaining extension ID and their existing 12-hour settings/group rules. Manual checks visibly archived 22 tabs in Wabi and 6 in Personal, with Undo available; Wabi (pink) and Personal (orange) stayed checked as protected. No page reloads were forced.
+
+## Unload policy compatibility — 2026-10-28 (1.2.1)
+
+The user's Chrome error panel showed policy violations attributed to the guard while a website attempted to register a forbidden unload handler. A real browser fixture with `Permissions-Policy: unload=()` reproduced the exact warning through CDP Log before the fix; the regression passes after it.
+
+- A self-contained compatibility wrapper skips only window unload registration explicitly forbidden by the document policy. Allowed or unknown policy and unrelated events retain native forwarding. Browser policy is not relaxed and console reporting is not suppressed.
+- Existing live HTTP(S) pages receive this compatibility patch on installation/update without reload or installation/reset of their safety probe. Restricted, incognito, discarded and frozen pages are left alone; later document loads receive the updated guard normally.
+- Full Node suite: 48 passed. Installer suite: 14 passed. Real MV3 browser suite: 4 passed. Strict TypeScript, build, formatting and diff checks passed.
+- Upgrade/idempotence tests preserve an existing unsafe probe, leave missing probes absent, retain beforeunload forwarding and avoid wrapper stacking. A background lifecycle test covers update injection/filtering.
+- Independent review found no important defect; a separate serialized-function check confirmed compatibility in a fresh realm.
+- Installed 1.2.1 and visibly verified its version in both real Chrome profiles. Historical error entries are retained by Chrome; updating the extension does not erase that journal.

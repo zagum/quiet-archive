@@ -17,6 +17,9 @@ async function background(failFirstQuery = false) {
   let session: unknown;
   let queries = 0;
   let title = "Closure";
+  let installed: () => void;
+  const injections: number[] = [];
+  const extraTabs: any[] = [];
   let message: (...args: any[]) => boolean;
   const event = () => ({ addListener: (_fn: unknown) => {} });
   const group = {
@@ -58,6 +61,7 @@ async function background(failFirstQuery = false) {
             lastAccessed: Date.now(),
             status: "complete",
           },
+          ...extraTabs,
         ];
       },
       onActivated: event(),
@@ -65,6 +69,15 @@ async function background(failFirstQuery = false) {
       onCreated: event(),
       onRemoved: event(),
       onReplaced: event(),
+    },
+    scripting: {
+      executeScript: async (injection: any) => {
+        assert.equal(injection.world, "MAIN");
+        assert.equal(injection.target.allFrames, true);
+        assert.equal(typeof injection.func, "function");
+        injections.push(injection.target.tabId);
+        return [];
+      },
     },
     webNavigation: { onCommitted: event() },
     tabGroups: {
@@ -89,7 +102,11 @@ async function background(failFirstQuery = false) {
       id: "extension",
       getURL: (p: string) => `chrome-extension://extension/${p}`,
       onStartup: event(),
-      onInstalled: event(),
+      onInstalled: {
+        addListener: (fn: () => void) => {
+          installed = fn;
+        },
+      },
       onMessage: {
         addListener: (fn: any) => {
           message = fn;
@@ -116,6 +133,17 @@ async function background(failFirstQuery = false) {
   });
   await tick();
   return {
+    update: async () => {
+      extraTabs.push(
+        { id: 2, groupId: -1, url: "chrome://settings" },
+        { id: 3, groupId: -1, url: "https://sleeping.test", discarded: true },
+        { id: 4, groupId: -1, url: "https://frozen.test", frozen: true },
+        { id: 5, groupId: -1, url: "https://private.test", incognito: true },
+      );
+      installed();
+      await tick();
+      return injections;
+    },
     title: () => title,
     scan: () =>
       new Promise<any>((reply) =>
@@ -153,4 +181,9 @@ test("successful manual check clears the previous toolbar error immediately", as
   const result = await app.scan();
   assert.equal(result.ok, true, result.error);
   assert.equal(app.title(), "Closure");
+});
+
+test("extension update patches existing live HTTP pages without touching sleeping or restricted tabs", async () => {
+  const app = await background();
+  assert.deepEqual(await app.update(), [1]);
 });

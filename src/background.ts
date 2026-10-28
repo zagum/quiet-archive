@@ -1,3 +1,4 @@
+import { patchBlockedUnload } from "./unload.js";
 import { Engine, type Port } from "./engine.js";
 import {
   initialState,
@@ -7,7 +8,7 @@ import {
   type Group,
   type Safety,
 } from "./model.js";
-import { groupKey, validateSettings } from "./policy.js";
+import { groupKey, validateSettings, safeUrl } from "./policy.js";
 const ALARM = "quiet-archive-scan";
 const NOTIFICATION = "quiet-archive-undo";
 interface Session {
@@ -279,8 +280,34 @@ chrome.alarms.onAlarm.addListener((a) => {
 chrome.runtime.onStartup.addListener(() => {
   void ready().then(ensureAlarm).then(runScan).catch(report);
 });
+async function patchOpenPages(): Promise<void> {
+  const tabs = await chrome.tabs.query({ windowType: "normal" });
+  await Promise.all(
+    tabs
+      .filter(
+        (t) =>
+          t.id !== undefined &&
+          !t.incognito &&
+          !t.discarded &&
+          !t.frozen &&
+          t.url &&
+          safeUrl(t.url),
+      )
+      .map(async (t) => {
+        try {
+          await chrome.scripting.executeScript({
+            target: { tabId: t.id!, allFrames: true },
+            world: "MAIN",
+            func: patchBlockedUnload,
+          });
+        } catch {
+          /* Restricted frames stay untouched; no safety probe is installed. */
+        }
+      }),
+  );
+}
 chrome.runtime.onInstalled.addListener(() => {
-  void ready().catch(report);
+  void ready().then(patchOpenPages).catch(report);
 });
 chrome.webNavigation.onCommitted.addListener((info) => {
   if (info.frameId === 0)

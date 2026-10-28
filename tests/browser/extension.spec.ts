@@ -16,6 +16,14 @@ let base: string;
 let id: string;
 const server = createServer((req, res) => {
   res.setHeader("Content-Type", "text/html");
+  if (req.url === "/Unload-blocked") {
+    res.setHeader("Permissions-Policy", "unload=()");
+    res.end(`<!doctype html><title>Blocked unload</title><script>
+      window.addEventListener("unload", () => {});
+      window.testPageLoaded = true;
+    </script><h1>Blocked unload fixture</h1>`);
+    return;
+  }
   res.end(
     `<!doctype html><title>${req.url?.slice(1) || "Fixture"}</title><h1>Test page</h1><input aria-label="Draft"><iframe src="/frame" ${req.url === "/frame" ? "hidden" : ""}></iframe>`.replace(
       req.url === "/frame" ? '<iframe src="/frame" hidden></iframe>' : "NEVER",
@@ -383,4 +391,27 @@ test("opt-in archives sleeping tabs, preserves detected edits after discard, and
       t.url?.endsWith("/Sleeping"),
     ),
   ).toBe(true);
+});
+
+test("blocked site unload listeners do not create extension policy violations", async () => {
+  const page = await context.newPage();
+  const cdp = await context.newCDPSession(page);
+  const violations: string[] = [];
+  await cdp.send("Log.enable");
+  cdp.on("Log.entryAdded", ({ entry }) => {
+    if (entry.text.includes("unload is not allowed"))
+      violations.push(entry.text);
+  });
+  await page.goto(`${base}/Unload-blocked`);
+  expect(
+    await page.evaluate(() =>
+      (document as any).featurePolicy.allowsFeature("unload"),
+    ),
+  ).toBe(false);
+  expect(await page.evaluate(() => (window as any).testPageLoaded)).toBe(true);
+  expect(violations).toEqual([]);
+  await page.evaluate(() => window.addEventListener("beforeunload", () => {}));
+  expect(
+    await page.evaluate(() => (window as any).__quietArchiveProbeV1().safe),
+  ).toBe(false);
 });
